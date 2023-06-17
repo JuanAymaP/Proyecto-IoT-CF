@@ -1,30 +1,40 @@
 //#include <WiFi.h> // Con el ESP8266: #include <ESP8266WiFi.h>
-#include <ESP8266WiFi.h>
+#include <WiFi.h>
 #include <PubSubClient.h>
+#include <NewPing.h>
 
-#include <DHT.h> //Cargamos la librería DHT tambien necesitas la libreria ADAFRUIT UNIFIED SENSOR
+//#include <DHT.h> //Cargamos la librería DHT tambien necesitas la libreria ADAFRUIT UNIFIED SENSOR
 #define DHT_PIN D4 // Se define el pin GPIO2 = D4  ESP8266 para conectar el sensor DHT22
 #define DHT_TIPO DHT22 //Definimos el modelo del sensor DHT22
-#define LED 16
+#define LED 27
 
 //Sensor Humedad
 const int sensorPin = A0; // Sensor FC-28
 int humedadSuelo = 0;
 
-DHT dht(DHT_PIN, DHT_TIPO); //Crea objeto sensorTH
+//rele y sensor ultrasonico
+//int RELE = 27;
+int TRIG = 25;      // trigger en pin 10
+int ECO = 33;      // echo en pin 9
+unsigned int DISTANCIA;
+NewPing sonar(TRIG, ECO);
+
+
+//DHT dht(DHT_PIN, DHT_TIPO); //Crea objeto sensorTH
 
 //Configuracion del user
-const char* ssid = "TP_Ayma";
-const char* password = "09089327";
+const char* ssid = "MICASAKC";
+const char* password = "KCS860816";
 
 char data_temp[12] = "";
 char data_humi[12] = "";
+char data_dist[12] = "";
 char data_humiSuelo[12] = "";
 char data_digital[12] = "";
 //String messageData;
 
 //IP del servidor BROKER
-const char *mqtt_broker = "192.168.0.110";
+const char *mqtt_broker = "18.230.184.146";
 
 //const char *mqtt_broker = "15.229.78.220";
 const int mqtt_port = 1883;
@@ -125,12 +135,18 @@ void setup() {
   pinMode(LED, OUTPUT);
   digitalWrite(LED, LOW);
 
-  //Configuramos el los pins
-  pinMode(A0, INPUT);
-  pinMode(D8, OUTPUT);
+//  //Configuramos el los pins
+//  pinMode(A0, INPUT);
+//  pinMode(D8, OUTPUT);
+
+  //rele
+//  pinMode(RELE,OUTPUT);
+  //ultrasonico
+//  pinMode(TRIG, OUTPUT);  // trigger como salida
+//  pinMode(ECO, INPUT);    // echo como entrada
 
   config_wifi();
-  dht.begin(); //Inicio del DHTxx
+//  dht.begin(); //Inicio del DHTxx
   //client.setServer(mqtt_broker,1883);//Conexión al servidor/Broker
   client.setServer(mqtt_broker, mqtt_port);
   client.setCallback(callback);//Llamada a los callback para ver si recibo mensajes del broker
@@ -145,29 +161,43 @@ void loop() {
   long tiempo = millis();
   //messageData="";
 
-  if (tiempo - tdhtx > 2000) { //Envia cada 2 segundos
+  if (tiempo - tdhtx > 200) { //Envia cada 2 segundos
     tdhtx = tiempo;
 
-    //Enviando humedad y temperatura
-    float t = dht.readTemperature();
-    float h = dht.readHumidity();
-    if (isnan(h) || isnan(t)) {
-      Serial.print(F("Failed to read from DHT sensor!"));
-      return;
-    }
+//    //Enviando humedad y temperatura
+//    float t = dht.readTemperature();
+//    float h = dht.readHumidity();
+//    if (isnan(h) || isnan(t)) {
+//      Serial.print(F("Failed to read from DHT sensor!"));
+//      return;
+//    }
 
-    sprintf(data_temp, "%3.2f", t); //dar formato a un numero entero, flotante, double, etc a String (3 enteros.2 decimales flotantes)
-    client.publish("temperatura", data_temp); //el topic se llama temperatura
-    Serial.print("Publish message temperatura: ");
-    Serial.println(data_temp);//msg
+//    sprintf(data_temp, "%3.2f", t); //dar formato a un numero entero, flotante, double, etc a String (3 enteros.2 decimales flotantes)
+//    client.publish("temperatura", data_temp); //el topic se llama temperatura
+//    Serial.print("Publish message temperatura: ");
+//    Serial.println(data_temp);//msg
+//
+//    sprintf(data_humi, "%3.2f", h); //dar formato a un numero entero, flotante, double, etc a String (3 enteros.2 decimales flotantes)
+//    client.publish("humedad", data_humi); //el topic se llama humedad
+//    Serial.print("Publish message humedad: ");
+//    //Serial.print("Humedad: ");
+//    Serial.println(data_humi);//msg
+//    sensorFC28();
+   
+      DISTANCIA = sonar.ping_cm();
+      Serial.print("FFF:  ");
+      Serial.println(DISTANCIA);
+      
+      if(isnan(DISTANCIA)){
+        Serial.print(F("Failed to read from ultrasonic sensor!"));
+//      return;
+      }
 
-    sprintf(data_humi, "%3.2f", h); //dar formato a un numero entero, flotante, double, etc a String (3 enteros.2 decimales flotantes)
-    client.publish("humedad", data_humi); //el topic se llama humedad
-    Serial.print("Publish message humedad: ");
-    //Serial.print("Humedad: ");
-    Serial.println(data_humi);//msg
-    sensorFC28();
-
+    sprintf(data_dist, "%u", DISTANCIA); //dar formato a un numero entero, flotante, double, etc a String (3 enteros.2 decimales flotantes)
+    client.publish("distancia", data_dist); //el topic se llama humedad
+    Serial.print("Publish message distancia: ");
+    //Serial.print("Distancia: ");
+    Serial.println(data_dist);//msg
 
   }
 }
@@ -176,25 +206,25 @@ void sensorFC28() {
 
   //Enviando humedad y temperatura
   //Aplique energía al sensor de humedad del suelo
-  digitalWrite(D8, HIGH);
+//  digitalWrite(D8, HIGH);
   delay(10); // espera de 10 milisegundos
-  humedadSuelo = analogRead(A0);
-  // Apague el sensor para reducir la corrosión del metal
-  //con el tiempo
-  digitalWrite(D8, LOW);
-  //Convertir el valor en porcentaje
-  float valHumsuelo = map(humedadSuelo, 1023, 0, 0, 100);
-
-  if (isnan(humedadSuelo)) {
-    Serial.print(F("Failed to read from FC-28 sensor!"));
-    return;
-  }
-
-  sprintf(data_humiSuelo, "%3.2f", valHumsuelo); //dar formato a un numero entero, flotante, double, etc a String (3 enteros.2 decimales flotantes)
-  client.publish("humedadSuelo", data_humiSuelo); //el topic se llama humedadSuelo
-  Serial.print("Publish message humedadSuelo: ");
-  //Serial.print("humedadSuelo: ");
-  Serial.println(data_humiSuelo);//msg
+//  humedadSuelo = analogRead(A0);
+//  // Apague el sensor para reducir la corrosión del metal
+//  //con el tiempo
+//  digitalWrite(D8, LOW);
+//  //Convertir el valor en porcentaje
+//  float valHumsuelo = map(humedadSuelo, 1023, 0, 0, 100);
+//
+//  if (isnan(humedadSuelo)) {
+//    Serial.print(F("Failed to read from FC-28 sensor!"));
+//    return;
+//  }
+//
+//  sprintf(data_humiSuelo, "%3.2f", valHumsuelo); //dar formato a un numero entero, flotante, double, etc a String (3 enteros.2 decimales flotantes)
+//  client.publish("humedadSuelo", data_humiSuelo); //el topic se llama humedadSuelo
+//  Serial.print("Publish message humedadSuelo: ");
+//  //Serial.print("humedadSuelo: ");
+//  Serial.println(data_humiSuelo);//msg
 }
 
 
