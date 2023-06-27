@@ -2,7 +2,7 @@
 #include <ESP8266WiFi.h>
 #include <PubSubClient.h>
 #include <DHT.h> //Cargamos la librería DHT tambien necesitas la libreria ADAFRUIT UNIFIED SENSOR
-#include <Ultrasonic.h>  
+#include <NewPing.h>
 
 //Sensor de humedad DHT22
 #define DHT_PIN D4 // Se define el pin GPIO2 = D4  ESP8266 para conectar el sensor DHT22
@@ -11,20 +11,23 @@
 DHT dht(DHT_PIN, DHT_TIPO); //Crea objeto sensor DHT22
 
 //Sensor FC-28
-const int sensorPin = A0; // Sensor FC-28
+#define sensorFCPin A0 // Sensor FC-28 pin analogico
+#define pinfc28V  D1 //control de alimentacion
 int humedadSuelo = 0;
-int pinfc28 = D1;
 
 //PIR
-int pinPir=D2;
-int val=0;//valor que recibimos del pir
-int pirEstado=LOW; //estado inicial del pir, no hay movimiento
+int pinPir = D2;
+int val = 0; //valor que recibimos del pir
+int pirEstado = LOW; //estado inicial del pir, no hay movimiento
 
-//pines SensorDistancia
-int TRIG = D2;      // trigger en pin 10
-int ECO = D3;      // echo en pin 9
-unsigned int DISTANCIA;
-Ultrasonic ultrasonic(TRIG, ECO);
+//pines SensorUltrasonico
+#define TRIG_PIN  D5      // trigger en pin 14
+#define  ECO_PIN  D6      // echo en pin 12
+NewPing sonar(TRIG_PIN, ECO_PIN);
+//float tiempo;
+//float distancia;
+//unsigned int DISTANCIA;
+//Ultrasonic ultrasonic(TRIG, ECO);
 
 //Configuracion del user
 const char* ssid = "TP_Ayma";
@@ -62,6 +65,9 @@ long tdhtx = 0;
 char msg[50];
 int value = 0;
 
+
+void sensorUltrasonico();
+//void sensorPir();
 //********************Funciones para Mqtt******************
 
 //--------------------Configuración Wifi-------------------
@@ -125,7 +131,7 @@ void reconnect() {
       Serial.println("Conexión exitosa");
     }
     else {
-      Serial.print("Failed, rc=");
+      Serial.println("Failed, rc=");
       Serial.print(client.state());
       Serial.print(" esperando 3 segundos");
       delay(3000);
@@ -141,7 +147,7 @@ void setup() {
 
   //Configuramos el los pines FC-28
   pinMode(A0, INPUT);
-  pinMode(pinfc28, OUTPUT);
+  pinMode(pinfc28V, OUTPUT);
 
   config_wifi();
   dht.begin(); //Inicio del DHT22
@@ -155,10 +161,10 @@ void loop() {
     reconnect();
   }
   client.loop();
-
   long tiempo = millis();
   //messageData="";
 
+  sensorPir();
   if (tiempo - tdhtx > 2000) { //Envia cada 2 segundos
     tdhtx = tiempo;
 
@@ -166,7 +172,7 @@ void loop() {
     float t = dht.readTemperature();
     float h = dht.readHumidity();
     if (isnan(h) || isnan(t)) {
-      Serial.print(F("Failed to read from DHT sensor!"));
+      Serial.println(F("Failed to read from DHT sensor!"));
       return;
     }
 
@@ -181,28 +187,29 @@ void loop() {
     //Serial.print("Humedad: ");
     Serial.println(data_humi);//msg
     sensorFC28();
-
-
+    sensorUltrasonico();
   }
+  
 }
 
 void sensorFC28() {
 
   //Enviando humedad y temperatura
   //Aplique energía al sensor de humedad del suelo
-  digitalWrite(pinfc28, HIGH);
+  digitalWrite(pinfc28V, HIGH);
   delay(10); // espera de 10 milisegundos
   humedadSuelo = analogRead(A0);
   // Apague el sensor para reducir la corrosión del metal
   //con el tiempo
-  digitalWrite(pinfc28, LOW);
+  digitalWrite(pinfc28V, LOW);
   //Convertir el valor en porcentaje
   float valHumsuelo = map(humedadSuelo, 1023, 0, 0, 100);
 
   if (isnan(humedadSuelo)) {
-    Serial.print(F("Failed to read from FC-28 sensor!"));
+    Serial.println(F("Failed to read from FC-28 sensor!"));
     return;
   }
+  //Serial.println(valHumsuelo);
 
   sprintf(data_humiSuelo, "%3.2f", valHumsuelo); //dar formato a un numero entero, flotante, double, etc a String (3 enteros.2 decimales flotantes)
   client.publish("humedadSuelo", data_humiSuelo); //el topic se llama humedadSuelo
@@ -213,7 +220,6 @@ void sensorFC28() {
 
 void sensorPir()
 {
-
   //Sensor de Movimiento
   val = digitalRead(pinPir);
   if (val == HIGH) { //si está activado
@@ -231,6 +237,22 @@ void sensorPir()
   }
 }
 
+void sensorUltrasonico() {
+  unsigned long tiempo, distancia;
+  tiempo = sonar.ping_median(5);//tiempo promedio de ir y venir del trigger
+  distancia = tiempo / US_ROUNDTRIP_CM;
+  
+  if (isnan(distancia)) {
+    Serial.println(F("Failed to read from sensorUltrasonico!"));
+    return;
+  }
+  sprintf(data_dist, "%u", distancia); //dar formato a un numero entero, flotante, double, etc a String (3 enteros.2 decimales flotantes)
+  client.publish("distanciaObj", data_dist); //el topic se llama distanciaObj
+  Serial.print("Publish message distanciaObj: ");
+  Serial.print(data_dist);//msg
+  Serial.println(" cm");
+  delay(50);
+}
 
 /*Para NODE RED
   topics:
