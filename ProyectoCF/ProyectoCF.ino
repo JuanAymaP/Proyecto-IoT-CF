@@ -1,17 +1,30 @@
 //#include <WiFi.h> // Con el ESP8266: #include <ESP8266WiFi.h>
 #include <ESP8266WiFi.h>
 #include <PubSubClient.h>
-
 #include <DHT.h> //Cargamos la librería DHT tambien necesitas la libreria ADAFRUIT UNIFIED SENSOR
+#include <Ultrasonic.h>  
+
+//Sensor de humedad DHT22
 #define DHT_PIN D4 // Se define el pin GPIO2 = D4  ESP8266 para conectar el sensor DHT22
 #define DHT_TIPO DHT22 //Definimos el modelo del sensor DHT22
 #define LED 16
+DHT dht(DHT_PIN, DHT_TIPO); //Crea objeto sensor DHT22
 
-//Sensor Humedad
+//Sensor FC-28
 const int sensorPin = A0; // Sensor FC-28
 int humedadSuelo = 0;
+int pinfc28 = D1;
 
-DHT dht(DHT_PIN, DHT_TIPO); //Crea objeto sensorTH
+//PIR
+int pinPir=D2;
+int val=0;//valor que recibimos del pir
+int pirEstado=LOW; //estado inicial del pir, no hay movimiento
+
+//pines SensorDistancia
+int TRIG = D2;      // trigger en pin 10
+int ECO = D3;      // echo en pin 9
+unsigned int DISTANCIA;
+Ultrasonic ultrasonic(TRIG, ECO);
 
 //Configuracion del user
 const char* ssid = "TP_Ayma";
@@ -21,6 +34,7 @@ char data_temp[12] = "";
 char data_humi[12] = "";
 char data_humiSuelo[12] = "";
 char data_digital[12] = "";
+char data_dist[12] = "";
 //String messageData;
 
 //IP del servidor BROKER
@@ -125,12 +139,12 @@ void setup() {
   pinMode(LED, OUTPUT);
   digitalWrite(LED, LOW);
 
-  //Configuramos el los pins
+  //Configuramos el los pines FC-28
   pinMode(A0, INPUT);
-  pinMode(D8, OUTPUT);
+  pinMode(pinfc28, OUTPUT);
 
   config_wifi();
-  dht.begin(); //Inicio del DHTxx
+  dht.begin(); //Inicio del DHT22
   //client.setServer(mqtt_broker,1883);//Conexión al servidor/Broker
   client.setServer(mqtt_broker, mqtt_port);
   client.setCallback(callback);//Llamada a los callback para ver si recibo mensajes del broker
@@ -176,12 +190,12 @@ void sensorFC28() {
 
   //Enviando humedad y temperatura
   //Aplique energía al sensor de humedad del suelo
-  digitalWrite(D8, HIGH);
+  digitalWrite(pinfc28, HIGH);
   delay(10); // espera de 10 milisegundos
   humedadSuelo = analogRead(A0);
   // Apague el sensor para reducir la corrosión del metal
   //con el tiempo
-  digitalWrite(D8, LOW);
+  digitalWrite(pinfc28, LOW);
   //Convertir el valor en porcentaje
   float valHumsuelo = map(humedadSuelo, 1023, 0, 0, 100);
 
@@ -197,6 +211,25 @@ void sensorFC28() {
   Serial.println(data_humiSuelo);//msg
 }
 
+void sensorPir()
+{
+
+  //Sensor de Movimiento
+  val = digitalRead(pinPir);
+  if (val == HIGH) { //si está activado
+    //digitalWrite(pinLED,HIGH);//encender LED movimiento
+    if (pirEstado == LOW) { //si previamente estaba apagado
+      Serial.println("Sensor activado");
+      pirEstado = HIGH;
+    }
+  } else { //si está desactivado
+    //digitalWrite(pinLED,LOW);
+    if (pirEstado == HIGH) { //si previamente estaba encendido
+      Serial.println("Sensor apagado");
+      pirEstado = LOW;
+    }
+  }
+}
 
 
 /*Para NODE RED
