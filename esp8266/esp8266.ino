@@ -157,6 +157,16 @@ void checkSerialCom() {
     SerialESP8266.readBytesUntil('U', buffer, lonbuffer);
     int distancia = SerialESP8266.parseInt();
 
+    SerialESP8266.readBytesUntil('Mov', buffer, lonbuffer);
+    int movimiento = SerialESP8266.parseInt();
+
+    if (movimiento == 1) {
+      client.publish("pir", "1"); //el topic se llama pir
+      //client.publish("pir", mov); //el topic se llama pir
+    }else{
+      client.publish("pir", "0"); //el topic se llama pir
+    }
+
     sprintf(data_temp, "%3.2f", t); //dar formato a un numero entero, flotante, double, etc a String (3 enteros.2 decimales flotantes)
     client.publish("temperatura", data_temp); //el topic se llama temperatura
     Serial.print("Publish message temperatura: ");
@@ -165,25 +175,25 @@ void checkSerialCom() {
     sprintf(data_humi, "%3.2f", h); //dar formato a un numero entero, flotante, double, etc a String (3 enteros.2 decimales flotantes)
     client.publish("humedad", data_humi); //el topic se llama humedad
     Serial.print("Publish message humedad: ");
-    //Serial.print("Humedad: ");
     Serial.println(data_humi);//msg
 
     sprintf(data_lumi, "%3.2f", l); //dar formato a un numero entero, flotante, double, etc a String (3 enteros.2 decimales flotantes)
     client.publish("luminosidad", data_lumi); //el topic se llama luminosidad
     Serial.print("Publish message luminosidad: ");
-    //Serial.print("Humedad: ");
     Serial.println(data_lumi);//msg
 
     sprintf(data_humiSuelo, "%3.2f", valHumsuelo); //dar formato a un numero entero, flotante, double, etc a String (3 enteros.2 decimales flotantes)
     client.publish("humedadSuelo", data_humiSuelo); //el topic se llama humedadSuelo
     Serial.print("Publish message humedadSuelo: ");
-    //Serial.print("humedadSuelo: ");
     Serial.println(data_humiSuelo);//msg
 
     sprintf(data_dist, "%u", distancia); //dar formato a un numero entero, flotante, double, etc a String (3 enteros.2 decimales flotantes)
-    client.publish("distanciaObj", data_dist); //el topic se llama distanciaObj
+    client.publish("distancia", data_dist); //el topic se llama distanciaObj
     Serial.print("Publish message distanciaObj: ");
     Serial.print(data_dist);//msg
     Serial.println(" cm");
+
+    Serial.print("Publish message movimiento: ");
+    Serial.println(movimiento);//msg
   }
 }

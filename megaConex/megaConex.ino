@@ -4,6 +4,9 @@
 #include <SoftwareSerial.h>
 #include <NewPing.h>
 
+
+String data="";
+
 /*DEFINICIÓN DE PINES*/
 #define rxPin 2                                                       //Pines para el envío se Arduino Uno a NodeMCU.
 #define txPin 3
@@ -70,6 +73,8 @@ void loop()
   long tiempo = millis();
   //messageData="";
 
+
+  sensorUltrasonico();
   sensorPir();
   if (tiempo - tdhtx > 2000) { //Envia cada 2 segundos
     tdhtx = tiempo;
@@ -77,18 +82,28 @@ void loop()
     sensorDHT();
     sensorLDR();
     sensorFC28();
-    sensorUltrasonico();
-    Trans.println('T' + String(t) + 'H' + String(h) + 'L' + String(LR) + "VHS" + String(valHumsuelo) + "U" + String(distancia));
-    Serial.print("Temperatura: ");
-    Serial.println(t);
-    Serial.print("Humedad: ");
-    Serial.println(h);
-    Serial.print("Luminosidad: ");
-    Serial.println(LR);
-    Serial.print("Humedad Suelo: ");
-    Serial.println(valHumsuelo);
-    Serial.print("Distancia: ");
-    Serial.println(distancia);
+
+
+    data= "T" + String(t);
+    data = data + "H" + String(h);
+    data = data + "L" + String(LR);
+    data = data + "VHS" + String(valHumsuelo);
+    data = data + "U" + String(distancia);
+    data = data + "Mov" + String(val);
+
+    Trans.println(data);
+    Serial.println(data);
+
+    //    Serial.print("Temperatura: ");
+    //    Serial.println(t);
+    //    Serial.print("Humedad: ");
+    //    Serial.println(h);
+    //    Serial.print("Luminosidad: ");
+    //    Serial.println(LR);
+    //    Serial.print("Humedad Suelo: ");
+    //    Serial.println(valHumsuelo);
+    //    Serial.print("Distancia: ");
+    //    Serial.println(distancia);
   }
 }
 
@@ -132,19 +147,19 @@ void sensorPir()
 {
   //Sensor de Movimiento
   val = digitalRead(pinPir);
-  if (val == HIGH) { //si está activado
-    //digitalWrite(pinLED,HIGH);//encender LED movimiento
-    if (pirEstado == LOW) { //si previamente estaba apagado
-      Serial.println("Sensor activado");
-      pirEstado = HIGH;
-    }
-  } else { //si está desactivado
-    //digitalWrite(pinLED,LOW);
-    if (pirEstado == HIGH) { //si previamente estaba encendido
-      Serial.println("Sensor apagado");
-      pirEstado = LOW;
-    }
-  }
+  //  if (val == HIGH) { //si está activado
+  //    //digitalWrite(pinLED,HIGH);//encender LED movimiento
+  //    if (pirEstado == LOW) { //si previamente estaba apagado
+  //      Serial.println("Sensor activado");
+  //      pirEstado = HIGH;
+  //    }
+  //  } else { //si está desactivado
+  //    //digitalWrite(pinLED,LOW);
+  //    if (pirEstado == HIGH) { //si previamente estaba encendido
+  //      Serial.println("Sensor apagado");
+  //      pirEstado = LOW;
+  //    }
+  //  }
 }
 
 void sensorUltrasonico() {
