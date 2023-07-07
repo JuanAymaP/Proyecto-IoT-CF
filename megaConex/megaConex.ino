@@ -11,6 +11,12 @@ String data="";
 #define rxPin 2                                                       //Pines para el envío se Arduino Uno a NodeMCU.
 #define txPin 3
 
+//Sensores magneticos
+#define sensorMagPin1 40     //Puerta de entrada
+#define  sensorMagPin2 45  //Habitacion 1
+int valMag1=0;
+int valMag2=0;
+
 //Sensor de humedad DHT22
 #define DHT_PIN 5 // Se define el pin para conectar el sensor DHT22
 #define DHT_TIPO DHT22 //Definimos el modelo del sensor DHT22
@@ -64,6 +70,8 @@ void setup()
   //Configuramos el los pines FC-28
   pinMode(sensorFCPin, INPUT);
   pinMode(pinfc28V, OUTPUT);
+  pinMode(sensorMagPin1,INPUT);
+  pinMode(sensorMagPin2,INPUT);
   dht.begin();                                  //Arrancamos el sensor.
 }
 
@@ -76,6 +84,7 @@ void loop()
 
   sensorUltrasonico();
   sensorPir();
+  sensorMagnetico();
   if (tiempo - tdhtx > 2000) { //Envia cada 2 segundos
     tdhtx = tiempo;
 
@@ -90,6 +99,8 @@ void loop()
     data = data + "VHS" + String(valHumsuelo);
     data = data + "U" + String(distancia);
     data = data + "Mov" + String(val);
+    data = data + "Mag1" + String(valMag1);
+    data = data + "Mag2" + String(valMag2);
 
     Trans.println(data);
     Serial.println(data);
@@ -142,6 +153,14 @@ void sensorFC28() {
     return;
   }
 }
+//Metodo para leer los sensores magneticos
+void sensorMagnetico()
+{
+  //Sensor magnetico de puerta de entrada
+  valMag1 = digitalRead(sensorMagPin1);
+  valMag2 = digitalRead(sensorMagPin2);
+}
+
 
 void sensorPir()
 {

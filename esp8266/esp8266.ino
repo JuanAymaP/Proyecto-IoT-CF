@@ -8,12 +8,16 @@ const int lonbuffer = 12;                                       // longitud del 
 char buffer[lonbuffer];                                         // buffer para almacenar el comando
 float luminosidad;                                              // valor del tercer parámetro
 
-#define LED 16
+#define LED D4
+#define motor D3
 
 
 //Configuracion del user
-const char* ssid = "TP_Ayma";
-const char* password = "09089327";
+//const char* ssid = "TP_Ayma";
+//const char* password = "09089327";
+
+const char* ssid = "redmi";
+const char* password = "rod963XD";
 
 char data_temp[12] = "";
 char data_humi[12] = "";
@@ -23,8 +27,8 @@ char data_dist[12] = "";
 char data_lumi[12] = "";
 
 //IP del servidor BROKER
-const char *mqtt_broker = "192.168.0.110";
-
+//const char *mqtt_broker = "192.168.0.110";
+const char *mqtt_broker = "192.168.173.11";
 //const char *mqtt_broker = "15.229.78.220";
 const int mqtt_port = 1883;
 //const char* mqtt_server="test.mosquitto.org";
@@ -88,12 +92,23 @@ void callback(String topic, byte* message, unsigned int length) {
   Serial.println(messageData);
 
   //ACTUADORES EL LED
-  if (messageData == "ON") {
+  if(String(topic)== "esp82iot"){
+    if (messageData == "ON") {
     Serial.println("LED");
     digitalWrite(LED, HIGH);
   }
-  else {
+  else if(messageData == "OFF"){
     digitalWrite(LED, LOW);
+  }
+  }
+  if(String(topic)=="motor_agua"){
+    if(messageData=="motorOn"){
+    Serial.println("motor On");
+      digitalWrite(motor, HIGH);
+  }else if(messageData=="motorOff"){
+    Serial.println("motor low");
+    digitalWrite(motor, LOW);
+  }
   }
 
 }
@@ -107,6 +122,7 @@ void reconnect() {
       //if (client.connect(clienteId.c_str(), mqtt_username, mqtt_password)) {
       client.subscribe("esp82iot");//topic para suscribir
       //client.subscribe("esp82iot/");//topic para suscribir
+      client.subscribe("motor_agua");
       Serial.println("Conexión exitosa");
     }
     else {
@@ -123,6 +139,10 @@ void setup()
   Serial.begin(9600);
   SerialESP8266.begin(9600);
   config_wifi();
+  pinMode(LED,OUTPUT);
+  digitalWrite(LED,LOW);
+  pinMode(motor,OUTPUT);
+  digitalWrite(motor,LOW);
   //client.setServer(mqtt_broker,1883);//Conexión al servidor/Broker
   client.setServer(mqtt_broker, mqtt_port);
   client.setCallback(callback);//Llamada a los callback para ver si recibo mensajes del broker
