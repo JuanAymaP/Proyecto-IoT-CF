@@ -8,8 +8,12 @@ const int lonbuffer = 12;                                       // longitud del 
 char buffer[lonbuffer];                                         // buffer para almacenar el comando
 float luminosidad;                                              // valor del tercer parámetro
 
-#define LED D4
-#define motor D3
+//Pines de los focos
+#define greenPin D4
+#define redPin D3
+
+//Pin del ventilador
+#define ventiladorPin D5
 
 
 //Configuracion del user
@@ -25,6 +29,8 @@ char data_humiSuelo[12] = "";
 char data_digital[12] = "";
 char data_dist[12] = "";
 char data_lumi[12] = "";
+char data_Mag1[12] = "";
+char data_Mag2[12] = "";
 
 //IP del servidor BROKER
 //const char *mqtt_broker = "192.168.0.110";
@@ -90,25 +96,32 @@ void callback(String topic, byte* message, unsigned int length) {
   Serial.println();
   Serial.println("-----------------------");
   Serial.println(messageData);
-
-  //ACTUADORES EL LED
-  if(String(topic)== "esp82iot"){
-    if (messageData == "ON") {
-    Serial.println("LED");
-    digitalWrite(LED, HIGH);
+  //FOCOS DE LA PUERTA DE ENTRADA Y HABITACIÓN 1
+  if (String(topic) == "esp82iot") {
+    if (messageData == "redOn") {
+      Serial.println("red On");
+      digitalWrite(redPin, HIGH);
+    } else if (messageData == "redOff") {
+      Serial.println("red Off");
+      digitalWrite(redPin, LOW);
+    }
+    if (messageData == "greenOn") {
+      Serial.println("green On");
+      digitalWrite(greenPin, HIGH);
+    } else if (messageData == "greenOff") {
+      Serial.println("greenOff");
+      digitalWrite(greenPin, LOW);
+    }
   }
-  else if(messageData == "OFF"){
-    digitalWrite(LED, LOW);
-  }
-  }
-  if(String(topic)=="motor_agua"){
-    if(messageData=="motorOn"){
-    Serial.println("motor On");
-      digitalWrite(motor, HIGH);
-  }else if(messageData=="motorOff"){
-    Serial.println("motor low");
-    digitalWrite(motor, LOW);
-  }
+  //VENTILADOR
+  if (String(topic) == "esp82iot/ventilador") {
+    if (messageData == "On") {
+      Serial.println("ventilador On");
+      digitalWrite(ventiladorPin, LOW);
+    } else if (messageData == "Off") {
+      Serial.println("ventilador off");
+      digitalWrite(ventiladorPin, HIGH);
+    }
   }
 
 }
@@ -122,7 +135,7 @@ void reconnect() {
       //if (client.connect(clienteId.c_str(), mqtt_username, mqtt_password)) {
       client.subscribe("esp82iot");//topic para suscribir
       //client.subscribe("esp82iot/");//topic para suscribir
-      client.subscribe("motor_agua");
+      client.subscribe("esp82iot/ventilador");
       Serial.println("Conexión exitosa");
     }
     else {
@@ -139,10 +152,10 @@ void setup()
   Serial.begin(9600);
   SerialESP8266.begin(9600);
   config_wifi();
-  pinMode(LED,OUTPUT);
-  digitalWrite(LED,LOW);
-  pinMode(motor,OUTPUT);
-  digitalWrite(motor,LOW);
+  pinMode(greenPin, OUTPUT);
+  pinMode(redPin, OUTPUT);
+  pinMode(ventiladorPin, OUTPUT);
+  digitalWrite(ventiladorPin,HIGH);
   //client.setServer(mqtt_broker,1883);//Conexión al servidor/Broker
   client.setServer(mqtt_broker, mqtt_port);
   client.setCallback(callback);//Llamada a los callback para ver si recibo mensajes del broker
@@ -183,9 +196,15 @@ void checkSerialCom() {
     if (movimiento == 1) {
       client.publish("pir", "1"); //el topic se llama pir
       //client.publish("pir", mov); //el topic se llama pir
-    }else{
+    } else {
       client.publish("pir", "0"); //el topic se llama pir
     }
+
+    SerialESP8266.readBytesUntil('Mag1', buffer, lonbuffer);
+    int sensorMgn1 = SerialESP8266.parseInt();
+
+    SerialESP8266.readBytesUntil('Mag2', buffer, lonbuffer);
+    int sensorMgn2 = SerialESP8266.parseInt();
 
     sprintf(data_temp, "%3.2f", t); //dar formato a un numero entero, flotante, double, etc a String (3 enteros.2 decimales flotantes)
     client.publish("temperatura", data_temp); //el topic se llama temperatura
@@ -215,5 +234,13 @@ void checkSerialCom() {
 
     Serial.print("Publish message movimiento: ");
     Serial.println(movimiento);//msg
+
+    sprintf(data_Mag1, "%d", sensorMgn1); //dar formato a un numero entero, flotante, double, etc a String (3 enteros.2 decimales flotantes)
+    client.publish("puertaEntrada", data_Mag1); //el topic se llama puertaEntrada
+    
+    sprintf(data_Mag2, "%d", sensorMgn2); //dar formato a un numero entero, flotante, double, etc a String (3 enteros.2 decimales flotantes)
+    client.publish("habitacion1", data_Mag2);
+
+    
   }
 }
