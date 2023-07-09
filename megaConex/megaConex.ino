@@ -66,7 +66,7 @@ void setup()
   pinMode (txPin , OUTPUT);
   Serial.begin(9600);
   Trans.begin(9600);                            //Velocidad de envío para la transmisión al NodeMCU.
-  Serial.println("DHT22 test!");
+  Serial.println("Gestionador de sensores!");
   //Configuramos el los pines FC-28
   pinMode(sensorFCPin, INPUT);
   pinMode(pinfc28V, OUTPUT);

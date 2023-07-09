@@ -15,13 +15,12 @@ float luminosidad;                                              // valor del ter
 //Pin del ventilador
 #define ventiladorPin D5
 
+//Pin del ventilador
+#define bombaPin D6
 
 //Configuracion del user
-//const char* ssid = "TP_Ayma";
-//const char* password = "09089327";
-
-const char* ssid = "redmi";
-const char* password = "rod963XD";
+const char* ssid = "TP_Ayma";
+const char* password = "09089327";
 
 char data_temp[12] = "";
 char data_humi[12] = "";
@@ -34,7 +33,7 @@ char data_Mag2[12] = "";
 
 //IP del servidor BROKER
 //const char *mqtt_broker = "192.168.0.110";
-const char *mqtt_broker = "192.168.173.11";
+const char *mqtt_broker = "18.231.187.97";
 //const char *mqtt_broker = "15.229.78.220";
 const int mqtt_port = 1883;
 //const char* mqtt_server="test.mosquitto.org";
@@ -123,6 +122,16 @@ void callback(String topic, byte* message, unsigned int length) {
       digitalWrite(ventiladorPin, HIGH);
     }
   }
+  //BOMBA DE AGUA
+  if (String(topic) == "esp82iot/bomba") {
+    if (messageData == "On") {
+      Serial.println("bomba On");
+      digitalWrite(bombaPin, LOW);
+    } else if (messageData == "Off") {
+      Serial.println("bomba off");
+      digitalWrite(bombaPin, HIGH);
+    }
+  }
 
 }
 
@@ -136,6 +145,7 @@ void reconnect() {
       client.subscribe("esp82iot");//topic para suscribir
       //client.subscribe("esp82iot/");//topic para suscribir
       client.subscribe("esp82iot/ventilador");
+      client.subscribe("esp82iot/bomba");
       Serial.println("Conexión exitosa");
     }
     else {
@@ -155,7 +165,9 @@ void setup()
   pinMode(greenPin, OUTPUT);
   pinMode(redPin, OUTPUT);
   pinMode(ventiladorPin, OUTPUT);
-  digitalWrite(ventiladorPin,HIGH);
+  digitalWrite(ventiladorPin, HIGH);
+  pinMode(bombaPin, OUTPUT);
+  digitalWrite(bombaPin, HIGH);
   //client.setServer(mqtt_broker,1883);//Conexión al servidor/Broker
   client.setServer(mqtt_broker, mqtt_port);
   client.setCallback(callback);//Llamada a los callback para ver si recibo mensajes del broker
@@ -237,10 +249,14 @@ void checkSerialCom() {
 
     sprintf(data_Mag1, "%d", sensorMgn1); //dar formato a un numero entero, flotante, double, etc a String (3 enteros.2 decimales flotantes)
     client.publish("puertaEntrada", data_Mag1); //el topic se llama puertaEntrada
-    
+    Serial.print("Publish message magnetico 1: ");
+    Serial.println(data_Mag1);//msg
+
     sprintf(data_Mag2, "%d", sensorMgn2); //dar formato a un numero entero, flotante, double, etc a String (3 enteros.2 decimales flotantes)
     client.publish("habitacion1", data_Mag2);
 
-    
+    Serial.print("Publish message magnetico 2: ");
+    Serial.println(data_Mag2);//msg
+
   }
 }
