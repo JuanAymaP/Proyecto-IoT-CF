@@ -8,6 +8,17 @@ const int lonbuffer = 12;                                       // longitud del 
 char buffer[lonbuffer];                                         // buffer para almacenar el comando
 float luminosidad;                                              // valor del tercer parámetro
 
+boolean manual = false;
+
+float t;
+float h;
+float l;
+float valHumsuelo;
+int distancia;
+int movimiento;
+int sensorMgn1;
+int sensorMgn2;
+
 //Pines de los focos
 #define greenPin D4
 #define redPin D3
@@ -95,11 +106,21 @@ void callback(String topic, byte* message, unsigned int length) {
   Serial.println();
   Serial.println("-----------------------");
   Serial.println(messageData);
+
+  if (String(topic) == "esp82iot/manual") {
+    if (messageData == "On") {
+      manual = true;
+    } else {
+      manual = false;
+    }
+  }
+
   //FOCOS DE LA PUERTA DE ENTRADA Y HABITACIÓN 1
-  if (String(topic) == "esp82iot") {
+  if (String(topic) == "esp82iot" && manual) {
     if (messageData == "redOn") {
       Serial.println("red On");
       digitalWrite(redPin, HIGH);
+      //Foco de entrada
     } else if (messageData == "redOff") {
       Serial.println("red Off");
       digitalWrite(redPin, LOW);
@@ -113,8 +134,9 @@ void callback(String topic, byte* message, unsigned int length) {
     }
   }
   //VENTILADOR
-  if (String(topic) == "esp82iot/ventilador") {
+  if (String(topic) == "esp82iot/ventilador" && manual) {
     if (messageData == "On") {
+      manual = true;
       Serial.println("ventilador On");
       digitalWrite(ventiladorPin, LOW);
     } else if (messageData == "Off") {
@@ -123,7 +145,7 @@ void callback(String topic, byte* message, unsigned int length) {
     }
   }
   //BOMBA DE AGUA
-  if (String(topic) == "esp82iot/bomba") {
+  if (String(topic) == "esp82iot/bomba" && manual) {
     if (messageData == "On") {
       Serial.println("bomba On");
       digitalWrite(bombaPin, LOW);
@@ -131,10 +153,9 @@ void callback(String topic, byte* message, unsigned int length) {
       Serial.println("bomba off");
       digitalWrite(bombaPin, HIGH);
     }
+
   }
-
 }
-
 //--------------------Conexión a broker/ Suscribir-------------------
 void reconnect() {
   while (!client.connected()) {
@@ -146,6 +167,7 @@ void reconnect() {
       //client.subscribe("esp82iot/");//topic para suscribir
       client.subscribe("esp82iot/ventilador");
       client.subscribe("esp82iot/bomba");
+      client.subscribe("esp82iot/manual");//modo manual
       Serial.println("Conexión exitosa");
     }
     else {
@@ -182,6 +204,12 @@ void loop()
   client.loop();
 
   checkSerialCom();
+  if (!manual) {
+    encendido_luzAuto(l);
+    encendidoRiegoAuto(valHumsuelo);
+    encendidoVentiladorAuto(t);
+  }
+
 }
 
 void checkSerialCom() {
@@ -258,5 +286,31 @@ void checkSerialCom() {
     Serial.print("Publish message magnetico 2: ");
     Serial.println(data_Mag2);//msg
 
+  }
+
+}
+
+void encendido_luzAuto(float lumi) {
+  if (lumi <= 20.0) {
+    //Puerta de entrada
+    digitalWrite(redPin, HIGH);
+  } else {
+    digitalWrite(redPin, LOW);
+  }
+}
+
+void encendidoRiegoAuto(float humedadSuel) {
+  if (humedadSuel <= 50.0) {
+    digitalWrite(bombaPin, HIGH);
+    delay(1000);
+    digitalWrite(bombaPin, LOW);
+  }
+}
+
+void encendidoVentiladorAuto(float temperatura) {
+  if (temperatura > 30.0) { //&& humedad<40
+    digitalWrite(ventiladorPin, HIGH);
+  } else {
+    digitalWrite(ventiladorPin, LOW);
   }
 }
