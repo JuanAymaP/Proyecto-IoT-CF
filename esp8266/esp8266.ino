@@ -1,9 +1,12 @@
+//Librerias
 #include <SoftwareSerial.h>
 #include <ESP8266WiFi.h>
 #include <PubSubClient.h>
 
+//Serial para la comunicacion con el arduino Mega 2560
 SoftwareSerial SerialESP8266(13, 15); // RX, TX
 
+//variables para la captura del mensaje del Arduino Mega por monitor serial
 const int lonbuffer = 12;                                       // longitud del buffer
 char buffer[lonbuffer];                                         // buffer para almacenar el comando
 float luminosidad;                                              // valor del tercer parámetro
@@ -44,8 +47,8 @@ char data_Mag2[12] = "";
 
 //IP del servidor BROKER
 //const char *mqtt_broker = "192.168.0.110";
-const char *mqtt_broker = "18.231.187.97";
-//const char *mqtt_broker = "15.229.78.220";
+//const char *mqtt_broker = "18.231.187.97";
+const char *mqtt_broker = "15.228.163.205";
 const int mqtt_port = 1883;
 //const char* mqtt_server="test.mosquitto.org";
 
@@ -212,26 +215,28 @@ void loop()
 
 }
 
+/////////Metodo para la lectura del monitor serial
 void checkSerialCom() {
   if (SerialESP8266.available() > 0)
   {
+    //parseo de los valores de los sensores
     SerialESP8266.readBytesUntil('T', buffer, lonbuffer);
-    float t = SerialESP8266.parseFloat();
+    t = SerialESP8266.parseFloat();
 
     SerialESP8266.readBytesUntil('H', buffer, lonbuffer);
-    float h = SerialESP8266.parseFloat();
+    h = SerialESP8266.parseFloat();
 
     SerialESP8266.readBytesUntil('L', buffer, lonbuffer);
-    float l = SerialESP8266.parseFloat();
+    l = SerialESP8266.parseFloat();
 
     SerialESP8266.readBytesUntil('VHS', buffer, lonbuffer);
-    float valHumsuelo = SerialESP8266.parseFloat();
+    valHumsuelo = SerialESP8266.parseFloat();
 
     SerialESP8266.readBytesUntil('U', buffer, lonbuffer);
-    int distancia = SerialESP8266.parseInt();
+    distancia = SerialESP8266.parseInt();
 
     SerialESP8266.readBytesUntil('Mov', buffer, lonbuffer);
-    int movimiento = SerialESP8266.parseInt();
+    movimiento = SerialESP8266.parseInt();
 
     if (movimiento == 1) {
       client.publish("pir", "1"); //el topic se llama pir
@@ -241,11 +246,12 @@ void checkSerialCom() {
     }
 
     SerialESP8266.readBytesUntil('Mag1', buffer, lonbuffer);
-    int sensorMgn1 = SerialESP8266.parseInt();
+    sensorMgn1 = SerialESP8266.parseInt();
 
     SerialESP8266.readBytesUntil('Mag2', buffer, lonbuffer);
-    int sensorMgn2 = SerialESP8266.parseInt();
+    sensorMgn2 = SerialESP8266.parseInt();
 
+    //Publicar los datos en el respectivo topico
     sprintf(data_temp, "%3.2f", t); //dar formato a un numero entero, flotante, double, etc a String (3 enteros.2 decimales flotantes)
     client.publish("temperatura", data_temp); //el topic se llama temperatura
     Serial.print("Publish message temperatura: ");
@@ -289,7 +295,7 @@ void checkSerialCom() {
   }
 
 }
-
+/////////Metodos para el trabajo automatico
 void encendido_luzAuto(float lumi) {
   if (lumi <= 20.0) {
     //Puerta de entrada
@@ -300,17 +306,17 @@ void encendido_luzAuto(float lumi) {
 }
 
 void encendidoRiegoAuto(float humedadSuel) {
-  if (humedadSuel <= 50.0) {
-    digitalWrite(bombaPin, HIGH);
-    delay(1000);
+  if (humedadSuel <= 20.0) {
     digitalWrite(bombaPin, LOW);
+    delay(1000);
+    digitalWrite(bombaPin, HIGH);
   }
 }
 
 void encendidoVentiladorAuto(float temperatura) {
-  if (temperatura > 30.0) { //&& humedad<40
-    digitalWrite(ventiladorPin, HIGH);
-  } else {
+  if (temperatura > 24.0) { //&& humedad<40
     digitalWrite(ventiladorPin, LOW);
+  } else {
+    digitalWrite(ventiladorPin, HIGH);
   }
 }
